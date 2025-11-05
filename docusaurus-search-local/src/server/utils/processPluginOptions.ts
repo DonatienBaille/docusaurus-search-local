@@ -40,6 +40,28 @@ export function processPluginOptions(
       ? ["en"]
       : [];
   }
+
+  const moduleRequest = config.lunrModule ?? "lunr";
+  try {
+    if (moduleRequest.startsWith(".") || path.isAbsolute(moduleRequest)) {
+      const absolutePath = path.isAbsolute(moduleRequest)
+        ? moduleRequest
+        : path.resolve(siteDir, moduleRequest);
+      config.lunrModule = require.resolve(absolutePath);
+    } else {
+      try {
+        config.lunrModule = require.resolve(moduleRequest, {
+          paths: [siteDir],
+        });
+      } catch {
+        config.lunrModule = require.resolve(moduleRequest);
+      }
+    }
+  } catch (error) {
+    throw new Error(
+      `Unable to resolve the Lunr module '${moduleRequest}'. Ensure the path is correct relative to your site directory.\n${error}`
+    );
+  }
   return config;
 }
 

@@ -1,11 +1,12 @@
-import lunr from "lunr";
 import { smartQueries } from "./smartQueries";
 import {
+  lunr,
   __setLanguage,
   __setRemoveDefaultStopWordFilter,
   __setFuzzyMatchingDistance,
 } from "./proxiedGeneratedConstants";
 import { SmartQuery } from "../../shared/interfaces";
+import { Token } from "./tokenize";
 
 jest.mock("./proxiedGeneratedConstants");
 
@@ -19,6 +20,9 @@ require("lunr-languages/lunr.multi")(lunr);
 (lunr as any).fake = {};
 
 const zhDictionary = ["研究生", "研究", "生命", "科学", "生命科学"];
+
+const createTokens = (values: string[]): Token[] =>
+  values.map((value) => ({ value }));
 
 interface TestQuery {
   tokens: string[];
@@ -227,9 +231,27 @@ describe("smartQueries", () => {
       ],
     ],
   ])("smartQueries(%j, zhDictionary) should work", (tokens, queries) => {
-    expect(smartQueries(tokens, zhDictionary).map(transformQuery)).toEqual(
-      queries
-    );
+    expect(
+      smartQueries(createTokens(tokens), zhDictionary).map(transformQuery)
+    ).toEqual(queries);
+  });
+
+  test("generates strict queries for exact phrases", () => {
+    const tokens: Token[] = [
+      {
+        value: "hello world",
+        exact: true,
+        normalized: ["hello", "world"],
+        separators: [1],
+      },
+    ];
+
+    expect(smartQueries(tokens, zhDictionary).map(transformQuery)).toEqual([
+      {
+        tokens: ["hello world"],
+        keyword: "+hello world",
+      },
+    ]);
   });
 });
 
@@ -254,9 +276,9 @@ describe("smartQueries with no stop words filter", () => {
       ],
     ],
   ])("smartQueries(%j, zhDictionary) should work", (tokens, queries) => {
-    expect(smartQueries(tokens, zhDictionary).map(transformQuery)).toEqual(
-      queries
-    );
+    expect(
+      smartQueries(createTokens(tokens), zhDictionary).map(transformQuery)
+    ).toEqual(queries);
   });
 });
 
@@ -301,9 +323,9 @@ describe("smartQueries with fuzzy matching distance 1", () => {
       ],
     ],
   ])("smartQueries(%j, zhDictionary) should work", (tokens, queries) => {
-    expect(smartQueries(tokens, zhDictionary).map(transformQuery)).toEqual(
-      queries
-    );
+    expect(
+      smartQueries(createTokens(tokens), zhDictionary).map(transformQuery)
+    ).toEqual(queries);
   });
 });
 
@@ -343,9 +365,9 @@ describe("smartQueries with fuzzy matching distance 2", () => {
       ],
     ],
   ])("smartQueries(%j, zhDictionary) should work", (tokens, queries) => {
-    expect(smartQueries(tokens, zhDictionary).map(transformQuery)).toEqual(
-      queries
-    );
+    expect(
+      smartQueries(createTokens(tokens), zhDictionary).map(transformQuery)
+    ).toEqual(queries);
   });
 });
 

@@ -221,4 +221,14 @@ export interface PluginOptions {
    * @default 1
    */
   fuzzyMatchingDistance?: number;
+
+  /**
+   * Path or module name for the Lunr implementation that should be used both on the server and the client.
+   *
+   * The value is resolved with Node's `require.resolve` relative to your Docusaurus site directory, so it can be
+   * either a package name or an absolute/relative file path.
+   *
+   * @default "lunr"
+   */
+  lunrModule?: string;
 }

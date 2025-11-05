@@ -1,5 +1,8 @@
+import lunr from "lunr";
 import { MatchMetadata } from "../../shared/interfaces";
-import { tokenizer } from "./tokenizer";
+import { createTokenizer } from "./tokenizer";
+
+const tokenizer = createTokenizer(lunr);
 
 describe("tokenizer", () => {
   test.each<[string | string[] | null | undefined, MatchMetadata, any[]]>([

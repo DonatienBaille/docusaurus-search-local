@@ -1,5 +1,4 @@
 /* eslint @typescript-eslint/no-var-requires: 0 */
-import lunr from "lunr";
 import {
   LunrWithMultiLanguage,
   ProcessedPluginOptions,
@@ -8,7 +7,21 @@ import {
 } from "../../shared/interfaces";
 
 let pluginInitialized = false;
-let plugin: lunr.Builder.Plugin | undefined;
+let plugin: import("lunr").Builder.Plugin | undefined;
+let cachedLunr: typeof import("lunr") | null = null;
+let cachedModulePath: string | null = null;
+
+function loadLunr(modulePath: string): typeof import("lunr") {
+  if (!cachedLunr || cachedModulePath !== modulePath) {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const required = require(modulePath);
+    cachedLunr = required.default ?? required;
+    cachedModulePath = modulePath;
+    pluginInitialized = false;
+    plugin = undefined;
+  }
+  return cachedLunr as typeof import("lunr");
+}
 
 export function buildIndex(
   allDocuments: SearchDocument[][],
@@ -18,8 +31,11 @@ export function buildIndex(
     removeDefaultStemmer,
     zhUserDict,
     zhUserDictPath,
+    lunrModule,
   }: ProcessedPluginOptions
 ): Omit<WrappedIndex, "type">[] {
+  const lunr = loadLunr(lunrModule);
+
   if (!pluginInitialized) {
     pluginInitialized = true;
     if (language.length > 1 || language.some((item) => item !== "en")) {
@@ -34,8 +50,9 @@ export function buildIndex(
       require(`lunr-languages/lunr.${lang}`)(lunr);
     }
     if (language.includes("zh")) {
-      const { tokenizer, loadUserDict } = require("./tokenizer");
+      const { createTokenizer, loadUserDict } = require("./tokenizer");
       loadUserDict(zhUserDict, zhUserDictPath);
+      const tokenizer = createTokenizer(lunr);
       require("../../shared/lunrLanguageZh").lunrLanguageZh(lunr, tokenizer);
     }
     if (language.length > 1) {

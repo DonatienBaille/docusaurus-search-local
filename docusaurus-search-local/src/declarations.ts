@@ -27,6 +27,8 @@ declare module "*/generated.js" {
 }
 
 declare module "*/generated-constants.js" {
+  import type _lunr from "lunr";
+  export const lunr: typeof _lunr;
   export const removeDefaultStopWordFilter: string[];
   export const language: string[];
   export const searchIndexUrl: string;
@@ -35,6 +37,8 @@ declare module "*/generated-constants.js" {
   // These below are for mocking only.
   export const __setLanguage: (value: string[]) => void;
   export const __setRemoveDefaultStopWordFilter: (value: string[]) => void;
+  const defaultLunr: typeof _lunr;
+  export default defaultLunr;
 }
 
 declare module "@docusaurus/Head";

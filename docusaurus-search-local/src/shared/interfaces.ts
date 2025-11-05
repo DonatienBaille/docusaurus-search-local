@@ -1,5 +1,5 @@
 import { DocusaurusConfig, LoadedPlugin } from "@docusaurus/types";
-import lunr from "lunr";
+import type lunr from "lunr";
 import { PluginOptions } from "../";
 
 export type { PluginOptions };
@@ -10,6 +10,9 @@ export interface SmartTermItem {
   value: string;
   trailing?: boolean;
   maybeTyping?: boolean;
+  exact?: boolean;
+  exactTerms?: string[];
+  exactSeparators?: number[];
 }
 
 export interface SmartQuery {
@@ -24,6 +27,8 @@ export interface QueryTermItem {
   presence: lunr.Query.presence;
   wildcard: lunr.Query.wildcard;
   editDistance?: number;
+  exactTerms?: string[];
+  exactSeparators?: number[];
 }
 
 export interface WrappedTerm {
@@ -159,6 +164,7 @@ export type ProcessedPluginOptions = Required<
   ignoreFiles: (string | RegExp)[];
   ignoreCssSelectors: string[];
   removeDefaultStopWordFilter: string[];
+  lunrModule: string;
 };
 
 export interface PostBuildData {

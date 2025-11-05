@@ -1,12 +1,12 @@
-import lunr from "lunr";
+import type { Token } from "lunr";
 
 export function generateTrimmer(
   wordCharacters: string
-): (token: lunr.Token) => lunr.Token {
+): (token: Token) => Token {
   const startRegex = new RegExp("^[^" + wordCharacters + "]+", "u");
   const endRegex = new RegExp("[^" + wordCharacters + "]+$", "u");
 
-  return function (token: lunr.Token) {
+  return function (token: Token) {
     return token.update(function (str: string) {
       return str.replace(startRegex, "").replace(endRegex, "");
     });

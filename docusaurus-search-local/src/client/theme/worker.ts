@@ -1,6 +1,5 @@
 import * as Comlink from "comlink";
-import lunr from "lunr";
-import { searchIndexUrl, language } from "../utils/proxiedGeneratedConstants";
+import { lunr, searchIndexUrl, language } from "../utils/proxiedGeneratedConstants";
 import { tokenize } from "../utils/tokenize";
 import { smartQueries } from "../utils/smartQueries";
 import {
@@ -10,6 +9,7 @@ import {
   SearchDocument,
   InitialSearchResult,
   SearchDocumentType,
+  QueryTerm,
 } from "../../shared/interfaces";
 import { sortSearchResults } from "../utils/sortSearchResults";
 import { processTreeStatusOfSearchResults } from "../utils/processTreeStatusOfSearchResults";
@@ -71,13 +71,21 @@ export class SearchWorker {
           ...index
             .query((query) => {
               for (const item of term) {
-                query.term(item.value, {
+                const options = {
                   wildcard: item.wildcard,
                   presence: item.presence,
                   ...(item.editDistance
                     ? { editDistance: item.editDistance }
-                    : null),
-                });
+                    : {}),
+                };
+
+                if (item.exactTerms && item.exactTerms.length > 0) {
+                  for (const exactTerm of item.exactTerms) {
+                    query.term(exactTerm, options);
+                  }
+                } else {
+                  query.term(item.value, options);
+                }
               }
             })
             .slice(0, limit)
@@ -89,6 +97,12 @@ export class SearchWorker {
                 )
             )
             .slice(0, limit - results.length)
+            .filter((result) =>
+              matchesExactPhrases(
+                term,
+                result.matchData.metadata as MatchMetadata
+              )
+            )
             .map((result) => {
               const document = documents.find(
                 (doc) => doc.i.toString() === result.ref
@@ -119,6 +133,87 @@ export class SearchWorker {
 
     return results as SearchResult[];
   }
+}
+
+function matchesExactPhrases(term: QueryTerm, metadata: MatchMetadata): boolean {
+  for (const item of term) {
+    if (!item.exactTerms || item.exactTerms.length <= 1) {
+      continue;
+    }
+
+    if (!phraseMatches(metadata, item.exactTerms, item.exactSeparators)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function phraseMatches(
+  metadata: MatchMetadata,
+  tokens: string[],
+  separators?: number[]
+): boolean {
+  if (tokens.length === 0) {
+    return true;
+  }
+
+  const fields = tokens
+    .map((token) => Object.keys(metadata[token] ?? {}))
+    .reduce<string[] | null>((acc, item) => {
+      if (acc === null) {
+        return item;
+      }
+      return acc.filter((field) => item.includes(field));
+    }, null);
+
+  if (!fields || fields.length === 0) {
+    return false;
+  }
+
+  const separatorList = separators ?? [];
+
+  for (const field of fields) {
+    const positionsPerToken = tokens.map((token) =>
+      metadata[token]?.[field]?.position ?? []
+    );
+
+    if (positionsPerToken.some((positions) => positions.length === 0)) {
+      continue;
+    }
+
+    const matchFrom = (
+      index: number,
+      start: number,
+      length: number
+    ): boolean => {
+      if (index === tokens.length) {
+        return true;
+      }
+
+      const positions = positionsPerToken[index];
+      const previousEnd = start + length;
+      const expectedGap = separatorList[index - 1] ?? 1;
+
+      for (const [nextStart, nextLength] of positions) {
+        if (nextStart - previousEnd === expectedGap) {
+          if (matchFrom(index + 1, nextStart, nextLength)) {
+            return true;
+          }
+        }
+      }
+
+      return false;
+    };
+
+    for (const [start, length] of positionsPerToken[0]) {
+      if (matchFrom(1, start, length)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 async function legacyFetchIndexes(baseUrl: string, searchContext: string) {

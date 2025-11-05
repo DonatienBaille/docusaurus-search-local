@@ -4,6 +4,8 @@ import {
   SearchDocument,
 } from "../../shared/interfaces";
 
+const lunrModule = require.resolve("lunr");
+
 describe("buildIndex", () => {
   const allDocuments: Partial<SearchDocument>[][] = [
     [
@@ -43,6 +45,7 @@ describe("buildIndex", () => {
         language: ["en"],
         removeDefaultStopWordFilter: [] as string[],
         removeDefaultStemmer: false,
+        lunrModule,
       } as ProcessedPluginOptions
     );
 
@@ -71,6 +74,7 @@ describe("buildIndex", () => {
         language: ["zh"],
         removeDefaultStopWordFilter: [] as string[],
         removeDefaultStemmer: false,
+        lunrModule,
       } as ProcessedPluginOptions
     );
 
@@ -90,6 +94,7 @@ describe("buildIndex", () => {
         language: ["es"],
         removeDefaultStopWordFilter: [] as string[],
         removeDefaultStemmer: false,
+        lunrModule,
       } as ProcessedPluginOptions
     );
 
@@ -108,6 +113,7 @@ describe("buildIndex", () => {
         language: ["ja"],
         removeDefaultStopWordFilter: [] as string[],
         removeDefaultStemmer: false,
+        lunrModule,
       } as ProcessedPluginOptions
     );
 
@@ -140,6 +146,7 @@ describe("buildIndex", () => {
         language: ["en", "zh"],
         removeDefaultStopWordFilter: ["en"],
         removeDefaultStemmer: false,
+        lunrModule,
       } as ProcessedPluginOptions
     );
 
