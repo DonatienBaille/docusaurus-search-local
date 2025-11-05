@@ -1,4 +1,5 @@
 import { SmartTerm } from "../../shared/interfaces";
+import { Token } from "./tokenize";
 import { cutZhWords } from "./cutZhWords";
 
 const MAX_TERMS = 12;
@@ -14,15 +15,26 @@ const HALF_MAX_TERMS = MAX_TERMS / 2;
  * @returns A smart term list.
  */
 export function smartTerms(
-  tokens: string[],
+  tokens: Token[],
   zhDictionary: string[]
 ): SmartTerm[] {
   const tokenTerms = tokens
     .map((token) => {
-      if (/\p{Unified_Ideograph}/u.test(token)) {
-        return cutZhWords(token, zhDictionary);
+      if (token.exact) {
+        return [
+          {
+            value: token.value,
+            exact: true,
+            exactTerms: token.normalized ?? [token.value],
+            exactSeparators: token.separators,
+          },
+        ];
+      }
+
+      if (/\p{Unified_Ideograph}/u.test(token.value)) {
+        return cutZhWords(token.value, zhDictionary);
       } else {
-        return [{ value: token }];
+        return [{ value: token.value }];
       }
     })
     .slice(0, MAX_TERMS);

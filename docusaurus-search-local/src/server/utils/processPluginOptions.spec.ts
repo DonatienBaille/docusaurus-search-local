@@ -26,6 +26,7 @@ describe("processPluginOptions", () => {
         ignoreCssSelectors: [],
         searchBarPosition: "right",
         removeDefaultStopWordFilter: [],
+        lunrModule: expect.any(String),
       },
     ],
     [
@@ -50,6 +51,7 @@ describe("processPluginOptions", () => {
         ignoreCssSelectors: [],
         searchBarPosition: "left",
         removeDefaultStopWordFilter: ["en"],
+        lunrModule: expect.any(String),
       },
     ],
   ])("processPluginOptions(...) should work", (options, config) => {
@@ -107,6 +109,7 @@ describe("processPluginOptions", () => {
       ignoreCssSelectors: [],
       searchBarPosition: "left",
       removeDefaultStopWordFilter: ["en", "zh"],
+      lunrModule: expect.any(String),
     });
   });
 });

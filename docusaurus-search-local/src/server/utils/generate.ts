@@ -104,7 +104,7 @@ export function generate(config: ProcessedPluginOptions, dir: string): string {
   fs.writeFileSync(path.join(dir, "generated.js"), contents.join("\n"));
 
   const constantContents: string[] = [
-    `import lunr from ${JSON.stringify(require.resolve("lunr"))};`,
+    `import lunr from ${JSON.stringify(config.lunrModule)};`,
   ];
   if (language.length > 1 || language.some((item) => item !== "en")) {
     constantContents.push(
@@ -130,12 +130,19 @@ export function generate(config: ProcessedPluginOptions, dir: string): string {
     );
   }
   if (language.includes("zh")) {
+    let lunrLanguageZhPath: string;
+    try {
+      lunrLanguageZhPath = require.resolve(
+        "@easyops-cn/docusaurus-search-local/dist/client/shared/lunrLanguageZh"
+      );
+    } catch {
+      lunrLanguageZhPath = path.resolve(
+        __dirname,
+        "../../client/shared/lunrLanguageZh"
+      );
+    }
     constantContents.push(
-      `require(${JSON.stringify(
-        require.resolve(
-          "@easyops-cn/docusaurus-search-local/dist/client/shared/lunrLanguageZh"
-        )
-      )}).lunrLanguageZh(lunr);`
+      `require(${JSON.stringify(lunrLanguageZhPath)}).lunrLanguageZh(lunr);`
     );
   }
   if (language.length > 1) {
@@ -159,6 +166,7 @@ export function generate(config: ProcessedPluginOptions, dir: string): string {
       fuzzyMatchingDistance
     )};`
   );
+  constantContents.push("export default lunr;");
   fs.writeFileSync(
     path.join(dir, "generated-constants.js"),
     constantContents.join("\n")

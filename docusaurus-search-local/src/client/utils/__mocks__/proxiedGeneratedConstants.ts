@@ -1,3 +1,5 @@
+export const lunr = require("lunr");
+
 export let language = ["en", "zh"];
 export let removeDefaultStopWordFilter: string[] = [];
 export const searchIndexUrl = "search-index{dir}.json?_=abc";
@@ -15,3 +17,5 @@ export function __setRemoveDefaultStopWordFilter(value: string[]): void {
 export function __setFuzzyMatchingDistance(value: number): void {
   fuzzyMatchingDistance = value;
 }
+
+export default lunr;

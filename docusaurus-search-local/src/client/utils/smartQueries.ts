@@ -1,11 +1,12 @@
-import lunr from "lunr";
 import { SmartQuery, SmartTerm } from "../../shared/interfaces";
 import { smartTerms } from "./smartTerms";
 import {
+  lunr,
   language,
   removeDefaultStopWordFilter,
   fuzzyMatchingDistance,
 } from "./proxiedGeneratedConstants";
+import { Token } from "./tokenize";
 
 /**
  * Get all possible queries for a list of tokens consists of words mixed English and Chinese,
@@ -17,7 +18,7 @@ import {
  * @returns A smart query list.
  */
 export function smartQueries(
-  tokens: string[],
+  tokens: Token[],
   zhDictionary: string[]
 ): SmartQuery[] {
   const terms = smartTerms(tokens, zhDictionary);
@@ -27,11 +28,19 @@ export function smartQueries(
     // All tokens are considered required and with wildcard.
     return [
       {
-        tokens,
-        term: tokens.map((value) => ({
-          value,
+        tokens: tokens.map((token) => token.value),
+        term: tokens.map((token) => ({
+          value: token.value,
           presence: lunr.Query.presence.REQUIRED,
-          wildcard: lunr.Query.wildcard.LEADING | lunr.Query.wildcard.TRAILING,
+          wildcard: token.exact
+            ? lunr.Query.wildcard.NONE
+            : lunr.Query.wildcard.LEADING | lunr.Query.wildcard.TRAILING,
+          ...(token.exact
+            ? {
+                exactTerms: token.normalized ?? [token.value],
+                exactSeparators: token.separators,
+              }
+            : {}),
         })),
       },
     ];
@@ -67,8 +76,10 @@ export function smartQueries(
     const pipe = (term: SmartTerm) =>
       stopWordPipelines.reduce(
         (term, p) =>
-          term.filter((item) =>
-            (p as unknown as (str: string) => string | undefined)(item.value)
+          term.filter(
+            (item) =>
+              item.exact ||
+              (p as unknown as (str: string) => string | undefined)(item.value)
           ),
         term
       );
@@ -79,7 +90,11 @@ export function smartQueries(
       refinedTerms.push(filteredTerm);
       // Add extra terms only if some stop words are removed,
       // and some non-stop-words exist too.
-      if (filteredTerm.length < term.length && filteredTerm.length > 0) {
+      if (
+        filteredTerm.length < term.length &&
+        filteredTerm.length > 0 &&
+        !term.some((item) => item.exact)
+      ) {
         newTerms.push(filteredTerm);
       }
     }
@@ -93,7 +108,7 @@ export function smartQueries(
   // to improve the search precision.
   const extraTerms: SmartTerm[] = [];
   for (const term of refinedTerms) {
-    if (term.length > 2) {
+    if (term.length > 2 && !term.some((item) => item.exact)) {
       for (let i = term.length - 1; i >= 0; i -= 1) {
         extraTerms.push(term.slice(0, i).concat(term.slice(i + 1)));
       }
@@ -116,7 +131,7 @@ function getQueriesMaybeTyping(
       // or the last token is not `maybeTyping`.
       terms.filter((term) => {
         const token = term[term.length - 1];
-        return !token.trailing && token.maybeTyping;
+        return !token.trailing && token.maybeTyping && !token.exact;
       }),
       editDistance,
       true
@@ -133,23 +148,31 @@ function termsToQueries(
     const query = {
       tokens: term.map((item) => item.value),
       term: term.map((item) => {
-        // The last token of a term maybe incomplete while user is typing.
-        // So append more queries with trailing wildcard added.
-        const trailing = maybeTyping
-          ? item.trailing || item.maybeTyping
-          : item.trailing;
+        const isExact = Boolean(item.exact);
+        const trailing =
+          !isExact &&
+          (maybeTyping ? item.trailing || item.maybeTyping : item.trailing);
         const distance =
-          editDistance > 0 && item.value.length > editDistance
+          !isExact && editDistance > 0 && item.value.length > editDistance
             ? editDistance
             : undefined;
-        return {
+
+        const queryItem = {
           value: item.value,
           presence: lunr.Query.presence.REQUIRED,
           wildcard: trailing
             ? lunr.Query.wildcard.TRAILING
             : lunr.Query.wildcard.NONE,
-          editDistance: distance,
-        };
+          ...(distance ? { editDistance: distance } : {}),
+        } as SmartQuery["term"][number];
+
+        if (isExact) {
+          queryItem.wildcard = lunr.Query.wildcard.NONE;
+          queryItem.exactTerms = item.exactTerms ?? [item.value];
+          queryItem.exactSeparators = item.exactSeparators;
+        }
+
+        return queryItem;
       }),
     };
 

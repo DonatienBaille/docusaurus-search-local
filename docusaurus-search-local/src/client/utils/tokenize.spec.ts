@@ -1,4 +1,6 @@
-import lunr from "lunr";
+import { lunr } from "./proxiedGeneratedConstants";
+
+jest.mock("./proxiedGeneratedConstants");
 
 // The `require`s below are required for testing `ja`.
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -20,7 +22,9 @@ describe("tokenize", () => {
     ],
     ["…", []],
   ])("tokenize('%s', ['en', 'zh']) should return %j", (text, tokens) => {
-    expect(tokenize(text, ["en", "zh"])).toEqual(tokens);
+    expect(tokenize(text, ["en", "zh"]).map((token) => token.value)).toEqual(
+      tokens
+    );
   });
 
   test.each<[string, string[]]>([
@@ -29,12 +33,25 @@ describe("tokenize", () => {
       ["população", "portuguesa", "é", "composta"],
     ],
   ])("tokenize('%s', ['en', 'pt']) should return %j", (text, tokens) => {
-    expect(tokenize(text, ["en", "pt"])).toEqual(tokens);
+    expect(tokenize(text, ["en", "pt"]).map((token) => token.value)).toEqual(
+      tokens
+    );
   });
 
   test.each<[string, string[]]>([
     ["私は電車が好きです。", ["私", "は", "電車", "が", "好き", "です", "。"]],
   ])("tokenize('%s', ['ja']) should return %j", (text, tokens) => {
-    expect(tokenize(text, ["ja"])).toEqual(tokens);
+    expect(tokenize(text, ["ja"]).map((token) => token.value)).toEqual(tokens);
+  });
+
+  test("tokenize preserves quoted phrases", () => {
+    const tokens = tokenize("hello \"exact phrase\" world", ["en"]);
+    expect(tokens.map((token) => token.value)).toEqual([
+      "hello",
+      "exact phrase",
+      "world",
+    ]);
+    expect(tokens[1].exact).toBe(true);
+    expect(tokens[1].normalized).toEqual(["exact", "phrase"]);
   });
 });

@@ -1,4 +1,5 @@
 import { smartTerms } from "./smartTerms";
+import { Token } from "./tokenize";
 
 const zhDictionary = ["研究生", "研究", "生命", "科学", "生命科学"];
 
@@ -27,9 +28,29 @@ describe("smartTerms", () => {
     [["alfabetização"], [["alfabetização"]]],
   ])("smartTerms(%j, zhDictionary) should work", (tokens, terms) => {
     expect(
-      smartTerms(tokens, zhDictionary).map((term) =>
+      smartTerms(tokens.map((value) => ({ value })), zhDictionary).map((term) =>
         term.map((item) => `${item.value}${item.trailing ? "*" : ""}`)
       )
     ).toEqual(terms);
+  });
+
+  test("preserves exact tokens", () => {
+    const exactToken: Token = {
+      value: "hello world",
+      exact: true,
+      normalized: ["hello", "world"],
+      separators: [1],
+    };
+
+    expect(smartTerms([exactToken], zhDictionary)).toEqual([
+      [
+        {
+          value: "hello world",
+          exact: true,
+          exactTerms: ["hello", "world"],
+          exactSeparators: [1],
+        },
+      ],
+    ]);
   });
 });
